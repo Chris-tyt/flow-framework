@@ -64,6 +64,7 @@ import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.plugins.ActionPlugin;
 import org.opensearch.plugins.Plugin;
 import org.opensearch.plugins.SystemIndexPlugin;
+import org.opensearch.plugins.SearchPipelinePlugin;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.repositories.RepositoriesService;
@@ -75,6 +76,11 @@ import org.opensearch.threadpool.ScalingExecutorBuilder;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 import org.opensearch.watcher.ResourceWatcherService;
+// import org.opensearch.search.pipeline.SearchRequestProcessor;
+import org.opensearch.search.pipeline.SearchResponseProcessor;
+import org.opensearch.flowframework.processors.JsonToJsonForLlmResponseProcessor;
+// import org.opensearch.flowframework.processors.JsonToJsonResponseProcessor;
+import org.opensearch.search.pipeline.Processor;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -116,182 +122,179 @@ import static org.opensearch.remote.metadata.common.CommonValue.TENANT_ID_FIELD_
 /**
  * An OpenSearch plugin that enables builders to innovate AI apps on OpenSearch.
  */
-public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin {
+public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin, SearchPipelinePlugin {
+//     @Override
+//     public Map<String, Processor.Factory<SearchRequestProcessor>> getRequestProcessors(Parameters parameters) {
+//         return Map.of(JsonToJsonRequestProcessor.TYPE, new JsonToJsonRequestProcessor.Factory());
+//     }
+    private MachineLearningNodeClient myMlClient;
+
+    @Override
+    public Map<String, Processor.Factory<SearchResponseProcessor>> getResponseProcessors(Parameters parameters) {
+        myMlClient = new MachineLearningNodeClient(parameters.client);
+        return Map.of(JsonToJsonForLlmResponseProcessor.TYPE, new JsonToJsonForLlmResponseProcessor.Factory(myMlClient));
+    }
 
     private FlowFrameworkSettings flowFrameworkSettings;
 
     /**
      * Instantiate this plugin.
      */
-    public FlowFrameworkPlugin() {}
+    public FlowFrameworkPlugin() {
+    }
 
     @Override
     public Collection<Object> createComponents(
-        Client client,
-        ClusterService clusterService,
-        ThreadPool threadPool,
-        ResourceWatcherService resourceWatcherService,
-        ScriptService scriptService,
-        NamedXContentRegistry xContentRegistry,
-        Environment environment,
-        NodeEnvironment nodeEnvironment,
-        NamedWriteableRegistry namedWriteableRegistry,
-        IndexNameExpressionResolver indexNameExpressionResolver,
-        Supplier<RepositoriesService> repositoriesServiceSupplier
-    ) {
+            Client client,
+            ClusterService clusterService,
+            ThreadPool threadPool,
+            ResourceWatcherService resourceWatcherService,
+            ScriptService scriptService,
+            NamedXContentRegistry xContentRegistry,
+            Environment environment,
+            NodeEnvironment nodeEnvironment,
+            NamedWriteableRegistry namedWriteableRegistry,
+            IndexNameExpressionResolver indexNameExpressionResolver,
+            Supplier<RepositoriesService> repositoriesServiceSupplier) {
         Settings settings = environment.settings();
         flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
         SdkClient sdkClient = SdkClientFactory.createSdkClient(
-            client,
-            xContentRegistry,
-            // Here we assume remote metadata client is only used with tenant awareness.
-            // This may change in the future allowing more options for this map
-            FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED.get(settings)
-                ? Map.ofEntries(
-                    Map.entry(REMOTE_METADATA_TYPE_KEY, REMOTE_METADATA_TYPE.get(settings)),
-                    Map.entry(REMOTE_METADATA_ENDPOINT_KEY, REMOTE_METADATA_ENDPOINT.get(settings)),
-                    Map.entry(REMOTE_METADATA_REGION_KEY, REMOTE_METADATA_REGION.get(settings)),
-                    Map.entry(REMOTE_METADATA_SERVICE_NAME_KEY, REMOTE_METADATA_SERVICE_NAME.get(settings)),
-                    Map.entry(TENANT_AWARE_KEY, "true"),
-                    Map.entry(TENANT_ID_FIELD_KEY, TENANT_ID_FIELD)
-                )
-                : Collections.emptyMap(),
-            // TODO: Find a better thread pool or make one
-            client.threadPool().executor(ThreadPool.Names.GENERIC)
-        );
+                client,
+                xContentRegistry,
+                // Here we assume remote metadata client is only used with tenant awareness.
+                // This may change in the future allowing more options for this map
+                FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED.get(settings)
+                        ? Map.ofEntries(
+                                Map.entry(REMOTE_METADATA_TYPE_KEY, REMOTE_METADATA_TYPE.get(settings)),
+                                Map.entry(REMOTE_METADATA_ENDPOINT_KEY, REMOTE_METADATA_ENDPOINT.get(settings)),
+                                Map.entry(REMOTE_METADATA_REGION_KEY, REMOTE_METADATA_REGION.get(settings)),
+                                Map.entry(REMOTE_METADATA_SERVICE_NAME_KEY, REMOTE_METADATA_SERVICE_NAME.get(settings)),
+                                Map.entry(TENANT_AWARE_KEY, "true"),
+                                Map.entry(TENANT_ID_FIELD_KEY, TENANT_ID_FIELD))
+                        : Collections.emptyMap(),
+                // TODO: Find a better thread pool or make one
+                client.threadPool().executor(ThreadPool.Names.GENERIC));
         EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
-            client,
-            sdkClient,
-            clusterService,
-            encryptorUtils,
-            xContentRegistry
-        );
+                client,
+                sdkClient,
+                clusterService,
+                encryptorUtils,
+                xContentRegistry);
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(
-            threadPool,
-            mlClient,
-            flowFrameworkIndicesHandler,
-            flowFrameworkSettings,
-            client
-        );
-        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool, flowFrameworkSettings);
+                threadPool,
+                mlClient,
+                flowFrameworkIndicesHandler,
+                flowFrameworkSettings,
+                client);
+        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool,
+                flowFrameworkSettings);
 
         SearchHandler searchHandler = new SearchHandler(
-            settings,
-            clusterService,
-            client,
-            sdkClient,
-            FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES
-        );
+                settings,
+                clusterService,
+                client,
+                sdkClient,
+                FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES);
 
         return List.of(
-            workflowStepFactory,
-            workflowProcessSorter,
-            encryptorUtils,
-            flowFrameworkIndicesHandler,
-            searchHandler,
-            flowFrameworkSettings,
-            sdkClient
-        );
+                workflowStepFactory,
+                workflowProcessSorter,
+                encryptorUtils,
+                flowFrameworkIndicesHandler,
+                searchHandler,
+                flowFrameworkSettings,
+                sdkClient);
     }
 
     @Override
     public List<RestHandler> getRestHandlers(
-        Settings settings,
-        RestController restController,
-        ClusterSettings clusterSettings,
-        IndexScopedSettings indexScopedSettings,
-        SettingsFilter settingsFilter,
-        IndexNameExpressionResolver indexNameExpressionResolver,
-        Supplier<DiscoveryNodes> nodesInCluster
-    ) {
+            Settings settings,
+            RestController restController,
+            ClusterSettings clusterSettings,
+            IndexScopedSettings indexScopedSettings,
+            SettingsFilter settingsFilter,
+            IndexNameExpressionResolver indexNameExpressionResolver,
+            Supplier<DiscoveryNodes> nodesInCluster) {
         return List.of(
-            new RestCreateWorkflowAction(flowFrameworkSettings),
-            new RestDeleteWorkflowAction(flowFrameworkSettings),
-            new RestProvisionWorkflowAction(flowFrameworkSettings),
-            new RestDeprovisionWorkflowAction(flowFrameworkSettings),
-            new RestSearchWorkflowAction(flowFrameworkSettings),
-            new RestGetWorkflowStateAction(flowFrameworkSettings),
-            new RestGetWorkflowAction(flowFrameworkSettings),
-            new RestGetWorkflowStepAction(flowFrameworkSettings),
-            new RestSearchWorkflowStateAction(flowFrameworkSettings)
-        );
+                new RestCreateWorkflowAction(flowFrameworkSettings),
+                new RestDeleteWorkflowAction(flowFrameworkSettings),
+                new RestProvisionWorkflowAction(flowFrameworkSettings),
+                new RestDeprovisionWorkflowAction(flowFrameworkSettings),
+                new RestSearchWorkflowAction(flowFrameworkSettings),
+                new RestGetWorkflowStateAction(flowFrameworkSettings),
+                new RestGetWorkflowAction(flowFrameworkSettings),
+                new RestGetWorkflowStepAction(flowFrameworkSettings),
+                new RestSearchWorkflowStateAction(flowFrameworkSettings));
     }
 
     @Override
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return List.of(
-            new ActionHandler<>(CreateWorkflowAction.INSTANCE, CreateWorkflowTransportAction.class),
-            new ActionHandler<>(DeleteWorkflowAction.INSTANCE, DeleteWorkflowTransportAction.class),
-            new ActionHandler<>(ProvisionWorkflowAction.INSTANCE, ProvisionWorkflowTransportAction.class),
-            new ActionHandler<>(DeprovisionWorkflowAction.INSTANCE, DeprovisionWorkflowTransportAction.class),
-            new ActionHandler<>(SearchWorkflowAction.INSTANCE, SearchWorkflowTransportAction.class),
-            new ActionHandler<>(GetWorkflowStateAction.INSTANCE, GetWorkflowStateTransportAction.class),
-            new ActionHandler<>(GetWorkflowAction.INSTANCE, GetWorkflowTransportAction.class),
-            new ActionHandler<>(GetWorkflowStepAction.INSTANCE, GetWorkflowStepTransportAction.class),
-            new ActionHandler<>(SearchWorkflowStateAction.INSTANCE, SearchWorkflowStateTransportAction.class),
-            new ActionHandler<>(ReprovisionWorkflowAction.INSTANCE, ReprovisionWorkflowTransportAction.class)
-        );
+                new ActionHandler<>(CreateWorkflowAction.INSTANCE, CreateWorkflowTransportAction.class),
+                new ActionHandler<>(DeleteWorkflowAction.INSTANCE, DeleteWorkflowTransportAction.class),
+                new ActionHandler<>(ProvisionWorkflowAction.INSTANCE, ProvisionWorkflowTransportAction.class),
+                new ActionHandler<>(DeprovisionWorkflowAction.INSTANCE, DeprovisionWorkflowTransportAction.class),
+                new ActionHandler<>(SearchWorkflowAction.INSTANCE, SearchWorkflowTransportAction.class),
+                new ActionHandler<>(GetWorkflowStateAction.INSTANCE, GetWorkflowStateTransportAction.class),
+                new ActionHandler<>(GetWorkflowAction.INSTANCE, GetWorkflowTransportAction.class),
+                new ActionHandler<>(GetWorkflowStepAction.INSTANCE, GetWorkflowStepTransportAction.class),
+                new ActionHandler<>(SearchWorkflowStateAction.INSTANCE, SearchWorkflowStateTransportAction.class),
+                new ActionHandler<>(ReprovisionWorkflowAction.INSTANCE, ReprovisionWorkflowTransportAction.class));
     }
 
     @Override
     public List<Setting<?>> getSettings() {
         return List.of(
-            FLOW_FRAMEWORK_ENABLED,
-            MAX_WORKFLOWS,
-            MAX_WORKFLOW_STEPS,
-            WORKFLOW_REQUEST_TIMEOUT,
-            TASK_REQUEST_RETRY_DURATION,
-            FILTER_BY_BACKEND_ROLES,
-            FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED,
-            WORKFLOW_THREAD_POOL_SIZE,
-            PROVISION_THREAD_POOL_SIZE,
-            MAX_ACTIVE_PROVISIONS_PER_TENANT,
-            DEPROVISION_THREAD_POOL_SIZE,
-            MAX_ACTIVE_DEPROVISIONS_PER_TENANT,
-            REMOTE_METADATA_TYPE,
-            REMOTE_METADATA_ENDPOINT,
-            REMOTE_METADATA_REGION,
-            REMOTE_METADATA_SERVICE_NAME
-        );
+                FLOW_FRAMEWORK_ENABLED,
+                MAX_WORKFLOWS,
+                MAX_WORKFLOW_STEPS,
+                WORKFLOW_REQUEST_TIMEOUT,
+                TASK_REQUEST_RETRY_DURATION,
+                FILTER_BY_BACKEND_ROLES,
+                FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED,
+                WORKFLOW_THREAD_POOL_SIZE,
+                PROVISION_THREAD_POOL_SIZE,
+                MAX_ACTIVE_PROVISIONS_PER_TENANT,
+                DEPROVISION_THREAD_POOL_SIZE,
+                MAX_ACTIVE_DEPROVISIONS_PER_TENANT,
+                REMOTE_METADATA_TYPE,
+                REMOTE_METADATA_ENDPOINT,
+                REMOTE_METADATA_REGION,
+                REMOTE_METADATA_SERVICE_NAME);
     }
 
     @Override
     public List<ExecutorBuilder<?>> getExecutorBuilders(Settings settings) {
         int maxSizeFromAllocatedProcessors = OpenSearchExecutors.allocatedProcessors(settings) - 1;
         return List.of(
-            new ScalingExecutorBuilder(
-                WORKFLOW_THREAD_POOL,
-                1,
-                Math.max(WORKFLOW_THREAD_POOL_SIZE.get(settings), maxSizeFromAllocatedProcessors),
-                TimeValue.timeValueMinutes(1),
-                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
-            ),
-            new ScalingExecutorBuilder(
-                PROVISION_WORKFLOW_THREAD_POOL,
-                1,
-                Math.max(PROVISION_THREAD_POOL_SIZE.get(settings), maxSizeFromAllocatedProcessors),
-                TimeValue.timeValueMinutes(5),
-                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_WORKFLOW_THREAD_POOL
-            ),
-            new ScalingExecutorBuilder(
-                DEPROVISION_WORKFLOW_THREAD_POOL,
-                1,
-                Math.max(DEPROVISION_THREAD_POOL_SIZE.get(settings), maxSizeFromAllocatedProcessors),
-                TimeValue.timeValueMinutes(1),
-                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + DEPROVISION_WORKFLOW_THREAD_POOL
-            )
-        );
+                new ScalingExecutorBuilder(
+                        WORKFLOW_THREAD_POOL,
+                        1,
+                        Math.max(WORKFLOW_THREAD_POOL_SIZE.get(settings), maxSizeFromAllocatedProcessors),
+                        TimeValue.timeValueMinutes(1),
+                        FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL),
+                new ScalingExecutorBuilder(
+                        PROVISION_WORKFLOW_THREAD_POOL,
+                        1,
+                        Math.max(PROVISION_THREAD_POOL_SIZE.get(settings), maxSizeFromAllocatedProcessors),
+                        TimeValue.timeValueMinutes(5),
+                        FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_WORKFLOW_THREAD_POOL),
+                new ScalingExecutorBuilder(
+                        DEPROVISION_WORKFLOW_THREAD_POOL,
+                        1,
+                        Math.max(DEPROVISION_THREAD_POOL_SIZE.get(settings), maxSizeFromAllocatedProcessors),
+                        TimeValue.timeValueMinutes(1),
+                        FLOW_FRAMEWORK_THREAD_POOL_PREFIX + DEPROVISION_WORKFLOW_THREAD_POOL));
     }
 
     @Override
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
         return List.of(
-            new SystemIndexDescriptor(CONFIG_INDEX, "Flow Framework Config index"),
-            new SystemIndexDescriptor(GLOBAL_CONTEXT_INDEX, "Flow Framework Global Context index"),
-            new SystemIndexDescriptor(WORKFLOW_STATE_INDEX, "Flow Framework Workflow State index")
-        );
+                new SystemIndexDescriptor(CONFIG_INDEX, "Flow Framework Config index"),
+                new SystemIndexDescriptor(GLOBAL_CONTEXT_INDEX, "Flow Framework Global Context index"),
+                new SystemIndexDescriptor(WORKFLOW_STATE_INDEX, "Flow Framework Workflow State index"));
     }
 
 }
