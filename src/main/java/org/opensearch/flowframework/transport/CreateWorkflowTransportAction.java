@@ -32,7 +32,11 @@ import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.util.JsonToJsonRecommender;
+import org.opensearch.flowframework.util.JsonToJsonRecommender.MappingOutput;
 import org.opensearch.flowframework.util.TenantAwareHelper;
+import org.opensearch.flowframework.workflow.JsonRecommenderStep;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.query.QueryBuilder;
@@ -236,6 +240,24 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             tenantId
         );
 
+        String[] validateJsonPath = { "jsonpath" };
+        if (Arrays.equals(request.getValidation(), validateJsonPath)) {
+            try {
+                String jsonpath = recommendJsonPath(templateWithUser);
+                // For convenience just use workflow_id field ¯\_(ツ)_/¯
+                listener.onResponse(new WorkflowResponse(jsonpath));
+            } catch (Exception e) {
+                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                    "Json Transform validation failed for template {}",
+                    templateWithUser.name()
+                ).getFormattedMessage();
+                logger.error(errorMessage, e);
+                listener.onFailure(
+                    e instanceof FlowFrameworkException ? e : new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e))
+                );
+            }
+            return;
+        }
         String[] validateAll = { "all" };
         if (Arrays.equals(request.getValidation(), validateAll)) {
             try {
@@ -580,5 +602,51 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             );
             workflowProcessSorter.validate(sortedNodes, pluginsService);
         }
+    }
+
+    private String recommendJsonPath(Template template) throws Exception {
+        // Special workflow key that's not "provision"!
+        Workflow workflow = template.workflows().get("json_recommender");
+        if (workflow == null) {
+            throw new FlowFrameworkException(
+                "JsonPath recommendation requires a workflow with json_recommender key",
+                RestStatus.BAD_REQUEST
+            );
+        }
+        // Fetch the process node list from the template's workflow
+        List<ProcessNode> sortedNodes = workflowProcessSorter.sortProcessNodes(
+            workflow,
+            null,
+            Collections.emptyMap(),
+            template.getTenantId()
+        );
+        // Only one node allowed in this workflow
+        if (sortedNodes.size() != 1) {
+            throw new FlowFrameworkException("JsonPath recommendation requires a single workflow step", RestStatus.BAD_REQUEST);
+        }
+        ProcessNode node = sortedNodes.getFirst();
+        // In theory we could use the NOOP step (or any step) for this special case but this is cleaner
+        if (!node.workflowStep().getName().equals(JsonRecommenderStep.NAME)) {
+            throw new FlowFrameworkException(
+                "JsonPath recommendation requires a step with the json_recommender step type",
+                RestStatus.BAD_REQUEST
+            );
+        }
+        // This is the user_inputs field
+        Map<String, Object> content = node.input().getContent();
+        // Create input and output strings
+        String jsonInput = String.valueOf(content.get(WorkflowNode.JSON_INPUT));
+        if (jsonInput.equals("null")) {
+            throw new FlowFrameworkException("JsonPath recommendation requires a json_input field", RestStatus.BAD_REQUEST);
+        }
+        String jsonOutput = String.valueOf(content.get(WorkflowNode.JSON_OUTPUT));
+        if (jsonOutput.equals("null")) {
+            throw new FlowFrameworkException("JsonPath recommendation requires a json_output field", RestStatus.BAD_REQUEST);
+        }
+
+        // Produce the recommendation!
+        MappingOutput recommendation = JsonToJsonRecommender.getRecommendation(jsonInput, jsonOutput);
+        // TODO: Actually validate that this JsonPath with the given input returns the given output
+        return recommendation.generalizedJsonPathString;
     }
 }

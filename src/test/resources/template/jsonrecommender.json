@@ -1,0 +1,79 @@
+{
+    "name": "JSON Recommender",
+    "workflows": {
+      "json_recommender": {
+        "nodes": [
+          {
+            "id": "json-recommender",
+            "type": "json_recommender",
+            "user_inputs": {
+              "json_input": {
+                  "item": {
+                    "id": "abcde",
+                    "name": "Champak Kumar",
+                    "allocDetails": {
+                      "useful": {
+                        "updatedAt": "2020-08-10T14:26:48-07:00",
+                        "token": 1134,
+                        "items": [
+                          {
+                            "allocation": 0.2,
+                            "team": {
+                              "id": 90,
+                              "name": "Some Team Name 1",
+                              "createdAt": "2010-01-19T10:52:52-07:00"
+                            }
+                          },
+                          {
+                            "allocation": 0.9,
+                            "team": {
+                              "id": 80,
+                              "name": "Some Team Name 2",
+                              "createdAt": "2010-01-19T10:52:52-07:00"
+                            }
+                          },
+                          {
+                            "allocation": 0.1,
+                            "team": {
+                              "id": 10,
+                              "name": "Some Team Name 3",
+                              "createdAt": "2010-01-19T10:52:52-07:00"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+              "json_output": {
+                   "name": "Champak Kumar",
+                   "allocDetails": [
+                     {
+                       "allocation": 0.2,
+                       "team": {
+                         "id": 90,
+                         "name": "Some Team Name 1"
+                       }
+                     },
+                     {
+                       "allocation": 0.9,
+                       "team": {
+                         "id": 80,
+                         "name": "Some Team Name 2"
+                       }
+                     },
+                     {
+                       "allocation": 0.1,
+                       "team": {
+                         "id": 10,
+                         "name": "Some Team Name 3"
+                       }
+                     }
+                   ]
+                 }
+            }
+          }
+        ]
+      }
+    }
+}

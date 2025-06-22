@@ -66,7 +66,9 @@ public class WorkflowNode implements ToXContentObject {
     /** The default timeout value if the template doesn't override it */
     public static final TimeValue NODE_TIMEOUT_DEFAULT_VALUE = new TimeValue(10, SECONDS);
     /** Map fields */
-    private static final Set<String> MAP_FIELDS = Set.of(CONFIGURATIONS, INTERFACE_FIELD, LLM);
+    public static final String JSON_INPUT = "json_input";
+    public static final String JSON_OUTPUT = "json_output";
+    private static final Set<String> MAP_FIELDS = Set.of(CONFIGURATIONS, INTERFACE_FIELD, LLM, JSON_INPUT, JSON_OUTPUT);
 
     private final String id; // unique id
     private final String type; // maps to a WorkflowStep

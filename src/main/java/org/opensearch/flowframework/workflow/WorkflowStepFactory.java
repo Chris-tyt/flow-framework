@@ -87,6 +87,7 @@ public class WorkflowStepFactory {
         Client client
     ) {
         stepMap.put(NoOpStep.NAME, NoOpStep::new);
+        stepMap.put(JsonRecommenderStep.NAME, JsonRecommenderStep::new);
         stepMap.put(CreateIndexStep.NAME, () -> new CreateIndexStep(client, flowFrameworkIndicesHandler));
         stepMap.put(DeleteIndexStep.NAME, () -> new DeleteIndexStep(client));
         stepMap.put(ReindexStep.NAME, () -> new ReindexStep(client, flowFrameworkIndicesHandler));
@@ -132,6 +133,9 @@ public class WorkflowStepFactory {
 
         /** Noop Step */
         NOOP(NoOpStep.NAME, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), null),
+
+        /** Json Recommender Step */
+        JSON_RECOMMENDER(JsonRecommenderStep.NAME, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), null),
 
         /** Create Index Step */
         CREATE_INDEX(CreateIndexStep.NAME, List.of(INDEX_NAME, CONFIGURATIONS), List.of(INDEX_NAME), Collections.emptyList(), null),
