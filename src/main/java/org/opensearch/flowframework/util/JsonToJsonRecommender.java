@@ -163,7 +163,18 @@ public class JsonToJsonRecommender {
      * @throws JsonProcessingException if JSON processing fails
      */
     public static String WriteMappedPathAsString(Map<String, Object> mappedPath) throws JsonProcessingException {
-        return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(mappedPath);
+        return MAPPER.writeValueAsString(mappedPath);
+    }
+
+    /**
+     * Writes a JSON string as a pretty JSON string.
+     *
+     * @param jsonString The JSON string to write
+     * @return The JSON string as a pretty JSON string
+     * @throws JsonProcessingException if JSON processing fails
+     */
+    public static String WriteMappedPathAsString(String jsonString) throws JsonProcessingException {
+        return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(jsonString);
     }
 
     /**

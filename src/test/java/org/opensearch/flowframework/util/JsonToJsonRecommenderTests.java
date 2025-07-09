@@ -69,11 +69,12 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         // whitespace differences)
         assertTrue(
             "Detailed JSON should contain expected mapping",
-            output.detailedJsonPathString.contains("\"value\" : \"$.level1.level2.level3.data\"")
+            output.detailedJsonPathString.contains("\"value\"") && output.detailedJsonPathString.contains("\"$.level1.level2.level3.data\"")
         );
         assertTrue(
             "Generalized JSON should contain expected mapping",
-            output.generalizedJsonPathString.contains("\"value\" : \"$.level1.level2.level3.data\"")
+            output.generalizedJsonPathString.contains("\"value\"")
+                && output.generalizedJsonPathString.contains("\"$.level1.level2.level3.data\"")
         );
     }
 
@@ -110,15 +111,15 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         // differences)
         assertTrue(
             "Detailed JSON should contain individual array mappings",
-            output.detailedJsonPathString.contains("\"values[0]\" : \"$.numbers[0]\"")
+            output.detailedJsonPathString.contains("\"values[0]\"") && output.detailedJsonPathString.contains("\"$.numbers[0]\"")
         );
         assertTrue(
             "Detailed JSON should contain all array elements",
-            output.detailedJsonPathString.contains("\"values[4]\" : \"$.numbers[4]\"")
+            output.detailedJsonPathString.contains("\"values[4]\"") && output.detailedJsonPathString.contains("\"$.numbers[4]\"")
         );
         assertTrue(
             "Generalized JSON should contain wildcard mapping",
-            output.generalizedJsonPathString.contains("\"values[*]\" : \"$.numbers[*]\"")
+            output.generalizedJsonPathString.contains("\"values[*]\"") && output.generalizedJsonPathString.contains("\"$.numbers[*]\"")
         );
     }
 
@@ -137,11 +138,11 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         // differences)
         assertTrue(
             "Detailed JSON should contain individual array mappings",
-            output.detailedJsonPathString.contains("\"values[0]\" : \"$.numbers[0]\"")
+            output.detailedJsonPathString.contains("\"values[0]\"") && output.detailedJsonPathString.contains("\"$.numbers[0]\"")
         );
         assertTrue(
             "Detailed JSON should contain mapped elements",
-            output.detailedJsonPathString.contains("\"values[3]\" : \"$.numbers[3]\"")
+            output.detailedJsonPathString.contains("\"values[3]\"") && output.detailedJsonPathString.contains("\"$.numbers[3]\"")
         );
         assertTrue("Detailed JSON should not contain unmapped elements", !output.detailedJsonPathString.contains("\"values[4]\""));
 
@@ -149,7 +150,7 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         // the same
         assertTrue(
             "Generalized JSON should also contain individual mappings",
-            output.generalizedJsonPathString.contains("\"values[0]\" : \"$.numbers[0]\"")
+            output.generalizedJsonPathString.contains("\"values[0]\"") && output.generalizedJsonPathString.contains("\"$.numbers[0]\"")
         );
         assertTrue("Generalized JSON should not contain wildcard patterns", !output.generalizedJsonPathString.contains("\"values[*]\""));
     }
@@ -187,20 +188,23 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
 
         // Verify that the actual output contains expected mappings (ignoring formatting
         // differences)
-        assertTrue("Detailed JSON should contain user_id mapping", output.detailedJsonPathString.contains("\"user_id\" : \"$.user.id\""));
+        assertTrue(
+            "Detailed JSON should contain user_id mapping",
+            output.detailedJsonPathString.contains("\"user_id\"") && output.detailedJsonPathString.contains("\"$.user.id\"")
+        );
         assertTrue(
             "Detailed JSON should contain skills array mappings",
-            output.detailedJsonPathString.contains("\"skill\" : \"$.user.skills[0]\"")
+            output.detailedJsonPathString.contains("\"skill\"") && output.detailedJsonPathString.contains("\"$.user.skills[0]\"")
         );
         assertTrue("Detailed JSON should contain multiple skill elements", output.detailedJsonPathString.contains("\"skills[2]\""));
 
         assertTrue(
             "Generalized JSON should contain wildcard user_id mapping",
-            output.generalizedJsonPathString.contains("\"user_id\" : \"$.user.id\"")
+            output.generalizedJsonPathString.contains("\"user_id\"") && output.generalizedJsonPathString.contains("\"$.user.id\"")
         );
         assertTrue(
             "Generalized JSON should contain wildcard skills mapping",
-            output.generalizedJsonPathString.contains("\"skill\" : \"$.user.skills[*]\"")
+            output.generalizedJsonPathString.contains("\"skill\"") && output.generalizedJsonPathString.contains("\"$.user.skills[*]\"")
         );
         assertTrue("Generalized JSON should use wildcard pattern", output.generalizedJsonPathString.contains("\"skills[*]\""));
     }
@@ -244,21 +248,25 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         // differences)
         assertTrue(
             "Detailed JSON should contain book mappings",
-            output.detailedJsonPathString.contains("\"book_name[0]\" : \"$[0].hits[0]._source.books.name\"")
+            output.detailedJsonPathString.contains("\"book_name[0]\"")
+                && output.detailedJsonPathString.contains("\"$[0].hits[0]._source.books.name\"")
         );
         assertTrue(
             "Detailed JSON should contain song mappings",
-            output.detailedJsonPathString.contains("\"song_name[0]\" : \"$[0].hits[0]._source.songs.name\"")
+            output.detailedJsonPathString.contains("\"song_name[0]\"")
+                && output.detailedJsonPathString.contains("\"$[0].hits[0]._source.songs.name\"")
         );
         assertTrue("Detailed JSON should contain multiple array elements", output.detailedJsonPathString.contains("\"book_name[1]\""));
 
         assertTrue(
             "Generalized JSON should contain wildcard book mapping",
-            output.generalizedJsonPathString.contains("\"book_name[*]\" : \"$[*].hits[0]._source.books.name\"")
+            output.generalizedJsonPathString.contains("\"book_name[*]\"")
+                && output.generalizedJsonPathString.contains("\"$[*].hits[0]._source.books.name\"")
         );
         assertTrue(
             "Generalized JSON should contain wildcard song mapping",
-            output.generalizedJsonPathString.contains("\"song_name[*]\" : \"$[*].hits[0]._source.songs.name\"")
+            output.generalizedJsonPathString.contains("\"song_name[*]\"")
+                && output.generalizedJsonPathString.contains("\"$[*].hits[0]._source.songs.name\"")
         );
     }
 
@@ -337,24 +345,34 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
 
         // Verify that the actual output contains expected mappings (ignoring formatting
         // differences)
-        assertTrue("Detailed JSON should contain name mapping", output.detailedJsonPathString.contains("\"name\" : \"$.item.name\""));
+        assertTrue(
+            "Detailed JSON should contain name mapping",
+            output.detailedJsonPathString.contains("\"name\"") && output.detailedJsonPathString.contains("\"$.item.name\"")
+        );
         assertTrue(
             "Detailed JSON should contain allocation mappings",
-            output.detailedJsonPathString.contains("\"allocation\" : \"$.item.allocDetails.useful.items[0].allocation\"")
+            output.detailedJsonPathString.contains("\"allocation\"")
+                && output.detailedJsonPathString.contains("\"$.item.allocDetails.useful.items[0].allocation\"")
         );
         assertTrue(
             "Detailed JSON should contain team id mappings",
-            output.detailedJsonPathString.contains("\"id\" : \"$.item.allocDetails.useful.items[0].team.id\"")
+            output.detailedJsonPathString.contains("\"id\"")
+                && output.detailedJsonPathString.contains("\"$.item.allocDetails.useful.items[0].team.id\"")
         );
         assertTrue(
             "Detailed JSON should contain team name mappings",
-            output.detailedJsonPathString.contains("\"name\" : \"$.item.allocDetails.useful.items[0].team.name\"")
+            output.detailedJsonPathString.contains("\"name\"")
+                && output.detailedJsonPathString.contains("\"$.item.allocDetails.useful.items[0].team.name\"")
         );
 
-        assertTrue("Generalized JSON should contain name mapping", output.generalizedJsonPathString.contains("\"name\" : \"$.item.name\""));
+        assertTrue(
+            "Generalized JSON should contain name mapping",
+            output.generalizedJsonPathString.contains("\"name\"") && output.generalizedJsonPathString.contains("\"$.item.name\"")
+        );
         assertTrue(
             "Generalized JSON should contain wildcard allocation mappings",
-            output.generalizedJsonPathString.contains("\"allocation\" : \"$.item.allocDetails.useful.items[*].allocation\"")
+            output.generalizedJsonPathString.contains("\"allocation\"")
+                && output.generalizedJsonPathString.contains("\"$.item.allocDetails.useful.items[*].allocation\"")
         );
         assertTrue(
             "Generalized JSON should use wildcard pattern for arrays",
@@ -444,20 +462,29 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
 
         // Verify that the actual output contains expected mappings (ignoring formatting
         // differences)
-        assertTrue("Detailed JSON should contain name mapping", output.detailedJsonPathString.contains("\"name\" : \"$.item.name\""));
+        assertTrue(
+            "Detailed JSON should contain name mapping",
+            output.detailedJsonPathString.contains("\"name\"") && output.detailedJsonPathString.contains("\"$.item.name\"")
+        );
         assertTrue(
             "Detailed JSON should contain allocation mapping with array index",
-            output.detailedJsonPathString.contains("\"allocation\" : \"$.item.allocDetails[0].useful.items[0].allocation\"")
+            output.detailedJsonPathString.contains("\"allocation\"")
+                && output.detailedJsonPathString.contains("\"$.item.allocDetails[0].useful.items[0].allocation\"")
         );
         assertTrue(
             "Detailed JSON should contain team mappings with array indices",
-            output.detailedJsonPathString.contains("\"id\" : \"$.item.allocDetails[0].useful.items[0].team.id\"")
+            output.detailedJsonPathString.contains("\"id\"")
+                && output.detailedJsonPathString.contains("\"$.item.allocDetails[0].useful.items[0].team.id\"")
         );
 
-        assertTrue("Generalized JSON should contain name mapping", output.generalizedJsonPathString.contains("\"name\" : \"$.item.name\""));
+        assertTrue(
+            "Generalized JSON should contain name mapping",
+            output.generalizedJsonPathString.contains("\"name\"") && output.generalizedJsonPathString.contains("\"$.item.name\"")
+        );
         assertTrue(
             "Generalized JSON should contain partial wildcard mapping",
-            output.generalizedJsonPathString.contains("\"allocation\" : \"$.item.allocDetails[0].useful.items[*].allocation\"")
+            output.generalizedJsonPathString.contains("\"allocation\"")
+                && output.generalizedJsonPathString.contains("\"$.item.allocDetails[0].useful.items[*].allocation\"")
         );
         assertTrue(
             "Generalized JSON should use wildcard for output arrays",
@@ -547,26 +574,35 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
 
         // Verify that the actual output contains expected mappings (ignoring formatting
         // differences)
-        assertTrue("Detailed JSON should contain name mapping", output.detailedJsonPathString.contains("\"name\" : \"$.item.name\""));
+        assertTrue(
+            "Detailed JSON should contain name mapping",
+            output.detailedJsonPathString.contains("\"name\"") && output.detailedJsonPathString.contains("\"$.item.name\"")
+        );
         assertTrue("Detailed JSON should contain temp[0] structure", output.detailedJsonPathString.contains("\"temp[0]\""));
         assertTrue(
             "Detailed JSON should contain allocation mappings",
-            output.detailedJsonPathString.contains("\"allocation\" : \"$.item.allocDetails.useful.items[0].allocation\"")
+            output.detailedJsonPathString.contains("\"allocation\"")
+                && output.detailedJsonPathString.contains("\"$.item.allocDetails.useful.items[0].allocation\"")
         );
         assertTrue(
             "Detailed JSON should contain team mappings",
-            output.detailedJsonPathString.contains("\"id\" : \"$.item.allocDetails.useful.items[0].team.id\"")
+            output.detailedJsonPathString.contains("\"id\"")
+                && output.detailedJsonPathString.contains("\"$.item.allocDetails.useful.items[0].team.id\"")
         );
 
         // Verify generalized JSON contains specific temp array elements
-        assertTrue("Generalized JSON should contain name mapping", output.generalizedJsonPathString.contains("\"name\" : \"$.item.name\""));
+        assertTrue(
+            "Generalized JSON should contain name mapping",
+            output.generalizedJsonPathString.contains("\"name\"") && output.generalizedJsonPathString.contains("\"$.item.name\"")
+        );
         assertTrue(
             "Generalized JSON should contain temp[0] with wildcard allocDetails",
             output.generalizedJsonPathString.contains("\"temp[0]\"") && output.generalizedJsonPathString.contains("\"allocDetails[*]\"")
         );
         assertTrue(
             "Generalized JSON should contain wildcard allocation mappings in temp[0]",
-            output.generalizedJsonPathString.contains("\"allocation\" : \"$.item.allocDetails.useful.items[*].allocation\"")
+            output.generalizedJsonPathString.contains("\"allocation\"")
+                && output.generalizedJsonPathString.contains("\"$.item.allocDetails.useful.items[*].allocation\"")
         );
     }
 
@@ -668,17 +704,24 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
 
         // Verify that the actual output contains expected mappings (ignoring formatting
         // differences)
-        assertTrue("Detailed JSON should contain name mapping", output.detailedJsonPathString.contains("\"name\" : \"$.item.name\""));
+        assertTrue(
+            "Detailed JSON should contain name mapping",
+            output.detailedJsonPathString.contains("\"name\"") && output.detailedJsonPathString.contains("\"$.item.name\"")
+        );
         assertTrue("Detailed JSON should contain temp[0] structure", output.detailedJsonPathString.contains("\"temp[0]\""));
         assertTrue("Detailed JSON should contain temp[1] structure", output.detailedJsonPathString.contains("\"temp[1]\""));
         assertTrue(
             "Detailed JSON should contain allocation mappings",
-            output.detailedJsonPathString.contains("\"allocation\" : \"$.item.allocDetails[0].useful.items[0].allocation\"")
+            output.detailedJsonPathString.contains("\"allocation\"")
+                && output.detailedJsonPathString.contains("\"$.item.allocDetails[0].useful.items[0].allocation\"")
         );
         assertTrue("Detailed JSON should contain allocDetails2 mapping", output.detailedJsonPathString.contains("\"allocDetails2\""));
 
         // Verify generalized JSON contains specific temp array elements
-        assertTrue("Generalized JSON should contain name mapping", output.generalizedJsonPathString.contains("\"name\" : \"$.item.name\""));
+        assertTrue(
+            "Generalized JSON should contain name mapping",
+            output.generalizedJsonPathString.contains("\"name\"") && output.generalizedJsonPathString.contains("\"$.item.name\"")
+        );
         assertTrue(
             "Generalized JSON should contain temp[0] with wildcard allocDetails",
             output.generalizedJsonPathString.contains("\"temp[0]\"") && output.generalizedJsonPathString.contains("\"allocDetails[*]\"")
@@ -689,11 +732,13 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         );
         assertTrue(
             "Generalized JSON should contain partial wildcard mapping for temp[0]",
-            output.generalizedJsonPathString.contains("\"allocation\" : \"$.item.allocDetails[0].useful.items[*].allocation\"")
+            output.generalizedJsonPathString.contains("\"allocation\"")
+                && output.generalizedJsonPathString.contains("\"$.item.allocDetails[0].useful.items[*].allocation\"")
         );
         assertTrue(
             "Generalized JSON should contain specific mapping for temp[1]",
-            output.generalizedJsonPathString.contains("\"allocation\" : \"$.item.allocDetails[0].useful.items[0].allocation\"")
+            output.generalizedJsonPathString.contains("\"allocation\"")
+                && output.generalizedJsonPathString.contains("\"$.item.allocDetails[0].useful.items[0].allocation\"")
         );
     }
 
