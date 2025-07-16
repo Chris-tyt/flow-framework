@@ -4,6 +4,7 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.search.SearchHit;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.search.SearchExtBuilder;
@@ -32,6 +33,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.Collections;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * JSON to JSON Request Processor for transforming search responses using LLM
@@ -74,7 +77,8 @@ public class JsonToJsonForLlmResponseProcessor extends AbstractProcessor impleme
         System.out.println("=====================IN PROCESS RESPONSE ASYNC===========================");
         String requestToModel = null;
         try {
-            requestToModel = generateRequestToModel(request);
+            requestToModel = generateRequestToModel(request,response);
+            System.out.println("requestToModel: " + requestToModel);
         } catch (Exception e) {
             System.out.println("Failed to generate request to model: " + e.getMessage());
             responseListener.onFailure(e);
@@ -116,7 +120,7 @@ public class JsonToJsonForLlmResponseProcessor extends AbstractProcessor impleme
         return TYPE;
     }
 
-    private String generateRequestToModel(SearchRequest request) throws IllegalArgumentException, JsonProcessingException ,IOException{
+    private String generateRequestToModel(SearchRequest request,SearchResponse response) throws IllegalArgumentException, JsonProcessingException ,IOException{
         if (request.source() == null) {
             throw new IllegalArgumentException("No source provided.");
         }
@@ -135,6 +139,9 @@ public class JsonToJsonForLlmResponseProcessor extends AbstractProcessor impleme
             extBuilder.toXContent(builder, ToXContent.EMPTY_PARAMS);
         }
         builder.endObject();
+        // List<String> searchResults = getSearchResults(response);
+        builder.field("search_result", getSearchResults(response));
+
         builder.endObject();
         String extJson = builder.toString();
 
@@ -164,12 +171,27 @@ public class JsonToJsonForLlmResponseProcessor extends AbstractProcessor impleme
         try {
             XContentParser parser = ParseUtils.jsonToParser(requestToModel);
             mlInput = MLInput.parse(parser, "REMOTE", ConnectorAction.ActionType.PREDICT);
+            // System.out.println("mlInput: " + mlInput.toString());
         } catch (Exception e) {
             System.out.println("Failed to parse JSON or MLInput: " + e.getMessage());
             actionListener.onFailure(e);
         }
         
         client.predict(openSearchModelId, mlInput, actionListener);
+    }
+
+    private String getSearchResults(SearchResponse response) {
+        List<String> searchResults = new ArrayList<>();
+        SearchHit[] hits = response.getHits().getHits();
+        // System.out.println("hits: " + Arrays.toString(hits));
+        // int total = hits.length;
+        // int end = (topN != GenerativeQAParameters.SIZE_NULL_VALUE) ? Math.min(topN, total) : total;
+        for (SearchHit hit:hits) {
+            Map<String, Object> docSourceMap = hit.getSourceAsMap();
+            searchResults.add(docSourceMap.toString());
+        }
+        System.out.println("searchResults: " + searchResults.toString());
+        return searchResults.toString();
     }
 
     /**
