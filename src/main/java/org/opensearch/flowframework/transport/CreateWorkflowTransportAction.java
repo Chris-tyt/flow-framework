@@ -34,7 +34,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.JsonToJsonRecommender;
-import org.opensearch.flowframework.util.JsonToJsonRecommender.MappingOutput;
+// import org.opensearch.flowframework.util.JsonToJsonRecommender.MappingOutput;
 import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.flowframework.workflow.JsonRecommenderStep;
 import org.opensearch.flowframework.workflow.ProcessNode;
@@ -645,8 +645,8 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         }
 
         // Produce the recommendation!
-        MappingOutput recommendation = JsonToJsonRecommender.getRecommendation(jsonInput, jsonOutput);
+        // MappingOutput recommendation = JsonToJsonRecommender.getRecommendation(jsonInput, jsonOutput);
         // TODO: Actually validate that this JsonPath with the given input returns the given output
-        return recommendation.generalizedJsonPathString;
+        return JsonToJsonRecommender.getRecommendationGeneralizedInStringFormat(jsonInput, jsonOutput);
     }
 }
